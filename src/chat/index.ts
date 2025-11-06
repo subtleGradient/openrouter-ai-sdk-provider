@@ -210,7 +210,7 @@ export class OpenRouterChatLanguageModel implements LanguageModelV2 {
       ...openrouterOptions,
     };
 
-    const { value: response, responseHeaders } = await postJsonToApi({
+    const { value: responseValue, responseHeaders } = await postJsonToApi({
       url: this.config.url({
         path: '/chat/completions',
         modelId: this.modelId,
@@ -224,6 +224,14 @@ export class OpenRouterChatLanguageModel implements LanguageModelV2 {
       abortSignal: options.abortSignal,
       fetch: this.config.fetch,
     });
+
+    // Check if response is an error (HTTP 200 with error payload)
+    if ('error' in responseValue) {
+      throw new Error(responseValue.error.message);
+    }
+
+    // Now TypeScript knows this is the success response
+    const response = responseValue;
 
     const choice = response.choices[0];
 

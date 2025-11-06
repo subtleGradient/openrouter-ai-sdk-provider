@@ -33,7 +33,8 @@ const OpenRouterChatCompletionBaseResponseSchema = z.object({
 });
 // limited version of the schema, focussed on what is needed for the implementation
 // this approach limits breakages when the API changes and increases efficiency
-export const OpenRouterNonStreamChatCompletionResponseSchema =
+export const OpenRouterNonStreamChatCompletionResponseSchema = z.union([
+  // Success response with choices
   OpenRouterChatCompletionBaseResponseSchema.extend({
     choices: z.array(
       z.object({
@@ -59,16 +60,27 @@ export const OpenRouterNonStreamChatCompletionResponseSchema =
 
           annotations: z
             .array(
-              z.object({
-                type: z.enum(['url_citation']),
-                url_citation: z.object({
-                  end_index: z.number(),
-                  start_index: z.number(),
-                  title: z.string(),
-                  url: z.string(),
-                  content: z.string().optional(),
+              z.union([
+                // URL citation from web search
+                z.object({
+                  type: z.literal('url_citation'),
+                  url_citation: z.object({
+                    end_index: z.number(),
+                    start_index: z.number(),
+                    title: z.string(),
+                    url: z.string(),
+                    content: z.string().optional(),
+                  }),
                 }),
-              }),
+                // File annotation from FileParserPlugin
+                z.object({
+                  type: z.literal('file_annotation'),
+                  file_annotation: z.object({
+                    file_id: z.string(),
+                    quote: z.string().optional(),
+                  }),
+                }),
+              ]),
             )
             .nullish(),
         }),
@@ -95,7 +107,12 @@ export const OpenRouterNonStreamChatCompletionResponseSchema =
         finish_reason: z.string().optional().nullable(),
       }),
     ),
-  });
+  }),
+  // Error response (HTTP 200 with error payload)
+  OpenRouterErrorResponseSchema.extend({
+    user_id: z.string().optional(),
+  }),
+]);
 // limited version of the schema, focussed on what is needed for the implementation
 // this approach limits breakages when the API changes and increases efficiency
 export const OpenRouterStreamChatCompletionChunkSchema = z.union([
